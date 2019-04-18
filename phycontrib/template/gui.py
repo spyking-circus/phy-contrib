@@ -65,7 +65,7 @@ class TemplateFeatureView(ScatterView):
 
 
 class AmplitudeView(ScatterView):
-    pass
+    _default_position = 'right'
 
 
 #------------------------------------------------------------------------------
@@ -305,7 +305,7 @@ class TemplateController(object):
         v.actions.separator()
 
         @v.actions.add(shortcut='w', checkable=True)
-        def toggle_templates():
+        def toggle_templates(checked):
             f, g = self._get_waveforms, self._get_template_waveforms
             if self.model.traces is None:
                 return
@@ -313,7 +313,7 @@ class TemplateController(object):
             v.on_select(cluster_ids=v.cluster_ids)
 
         @v.actions.add(shortcut='m', checkable=True)
-        def toggle_mean_waveforms():
+        def toggle_mean_waveforms(checked):
             f, g = self._get_waveforms, self._get_mean_waveforms
             v.waveforms = f if v.waveforms == g else g
             v.on_select(cluster_ids=v.cluster_ids)
@@ -484,7 +484,7 @@ class TemplateController(object):
         v.actions.separator()
 
         @v.actions.add(shortcut='alt+s', checkable=True, checked=v.show_all_spikes)
-        def toggle_highlighted_spikes():
+        def toggle_highlighted_spikes(checked):
             """Toggle between showing all spikes or selected spikes."""
             v.show_all_spikes = not v.show_all_spikes
             v.set_interval()

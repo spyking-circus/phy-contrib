@@ -35,11 +35,12 @@ def attach_plugins(controller, plugins=None, config_dir=None):
         try:
             p = get_plugin(plugin)()
         except ValueError:  # pragma: no cover
-            logger.warn("The plugin %s couldn't be found.", plugin)
+            logger.warning("The plugin %s couldn't be found.", plugin)
             continue
         try:
             p.attach_to_controller(controller)
             logger.debug("Attached plugin %s.", plugin)
         except Exception as e:  # pragma: no cover
-            logger.warn("An error occurred when attaching plugin %s: %s.",
-                        plugin, e)
+            logger.warning(
+                "An error occurred when attaching plugin %s: %s.",
+                plugin, e)

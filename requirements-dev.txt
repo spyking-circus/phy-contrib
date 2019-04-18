@@ -6,7 +6,7 @@ git+https://github.com/pytest-dev/pytest.git
 git+https://github.com/pytest-dev/pytest-qt.git
 
 flake8
-coverage==3.7.1
+coverage
 coveralls
 responses
 pytest-cov

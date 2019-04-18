@@ -137,7 +137,7 @@ class AmplitudeHistogram(IPlugin):
         def on_gui_ready(gui):
             # Called when the GUI is created.
             # We add the matplotlib figure to the GUI.
-            gui.add_view(f, name='AmplitudeHistogram')
+            gui.add_view(f, position='bottom')
 
             # Call on_select() asynchronously after a delay, and set a busy
             # cursor.
