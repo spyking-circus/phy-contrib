@@ -28,7 +28,7 @@ from phy.gui import create_app, run_app, GUI
 from phy.io.array import (Selector,
                           )
 from phy.io.context import Context, _cache_methods
-from phy.stats import correlograms
+from phy.stats import correlograms, firing_rate
 from phy.utils import Bunch, IPlugin, emit, connect
 from phy.utils._color import ColorSelector
 from phy.utils._misc import _read_python
@@ -516,9 +516,19 @@ class TemplateController(object):
                             window_size=window_size,
                             )
 
+    def _get_firing_rate(self, cluster_ids, bin_size):
+        spike_ids = self.selector.select_spikes(cluster_ids,
+                                                self.n_spikes_correlograms,
+                                                subset='random',
+                                                )
+        sc = self.supervisor.clustering.spike_clusters[spike_ids]
+        return firing_rate(
+            sc, cluster_ids=cluster_ids, bin_size=bin_size, duration=self.model.duration)
+
     def add_correlogram_view(self, gui):
         m = self.model
         v = CorrelogramView(correlograms=self._get_correlograms,
+                            firing_rate=self._get_firing_rate,
                             sample_rate=m.sample_rate,
                             )
         return self._add_view(gui, v)
