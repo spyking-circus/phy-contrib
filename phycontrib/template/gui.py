@@ -613,7 +613,7 @@ class TemplateController(object):
             }
             x_offsets = {}
             x_offset = 0.0
-            x_margin = 1.0
+            x_margin = 5.0
             for stimulus in unique_stimuli:
                 x_offsets[stimulus] = x_offset
                 x_offset += trial_durations[stimulus] + x_margin
@@ -624,9 +624,14 @@ class TemplateController(object):
                 y_offsets[stimulus] = 0
                 y_offset = max(y_offset, n_trials[stimulus])
             height = y_offset
+            # height = 1.0
             for stimulus in unique_stimuli:
                 trial_spike_times[stimulus] = np.concatenate(trial_spike_times[stimulus]) + x_offsets[stimulus]
                 trial_indices[stimulus] = np.concatenate(trial_indices[stimulus]) + y_offsets[stimulus]
+                # trial_indices[stimulus] = np.concatenate(trial_indices[stimulus])
+                # if n_trials[stimulus] > 2:
+                #     trial_indices[stimulus] /= (n_trials[stimulus] - 1)
+                # trial_indices[stimulus] += y_offsets[stimulus]
             x = np.concatenate(list(trial_spike_times.values()))
             y = np.concatenate(list(trial_indices.values()))
             data_bounds = (0.0, 0, width, height)
