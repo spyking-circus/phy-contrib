@@ -68,6 +68,10 @@ class AmplitudeView(ScatterView):
     pass
 
 
+class TrialView(ScatterView):
+    pass
+
+
 #------------------------------------------------------------------------------
 # Template Controller
 #------------------------------------------------------------------------------
@@ -81,6 +85,7 @@ class TemplateController(object):
     n_spikes_features = 10000
     n_spikes_amplitudes = 10000
     n_spikes_correlograms = 100000
+    n_spikes_trials = 10000
 
     def __init__(self, dat_path=None, config_dir=None, model=None, **kwargs):
         if model is None:
@@ -121,6 +126,7 @@ class TemplateController(object):
                   '_get_template_features',
                   '_get_amplitudes',
                   '_get_correlograms',
+                  '_get_trials',
                   )
         _cache_methods(self, memcached, cached)
 
@@ -549,6 +555,88 @@ class TemplateController(object):
         v.attach(gui)
         return v
 
+    # Trial view
+    # -------------------------------------------------------------------------
+
+    def _get_trials(self, cluster_id):
+        m = self.model
+        n = self.n_spikes_trials
+        spike_ids = self.selector.select_spikes([cluster_id], max_n_spikes_per_cluster=n)
+        spike_samples = m.spike_samples[spike_ids]
+        if m.trial_stimuli is None:
+            trial_spike_times = []
+            trial_indices = []
+            trial_start_samples = m.trial_start_samples
+            trial_end_samples = m.trial_end_samples
+            for k, (trial_start_sample, trial_end_sample) in enumerate(zip(trial_start_samples, trial_end_samples)):
+                mask = np.logical_and(
+                    trial_start_sample <= spike_samples,
+                    spike_samples <= trial_end_sample
+                )
+                spike_times = (spike_samples[mask] - trial_start_sample) / m.sample_rate
+                trial_spike_times.append(spike_times)
+                index = k
+                trial_indices.append(index * np.ones_like(spike_times))
+            x = np.concatenate(trial_spike_times)
+            y = np.concatenate(trial_indices)
+            trial_duration = (trial_end_samples[0] - trial_start_samples[0]) / m.sample_rate
+            n_trials = len(trial_start_samples)
+            data_bounds = (0.0, 0, trial_duration, n_trials)
+            answer = Bunch(x=x, y=y, data_bounds=data_bounds)
+        else:
+            unique_stimuli = np.unique(m.trial_stimuli)
+            trial_spike_times = {}
+            trial_indices = {}
+            trial_durations = {}
+            for stimulus in unique_stimuli:
+                trial_spike_times[stimulus] = []
+                trial_indices[stimulus] = []
+                trial_durations[stimulus] = 0.0
+                mask = m.trial_stimuli == stimulus
+                trial_start_samples = m.trial_start_samples[mask]
+                trial_end_samples = m.trial_end_samples[mask]
+                for k, (trial_start_sample, trial_end_sample) in enumerate(zip(trial_start_samples, trial_end_samples)):
+                    mask = np.logical_and(
+                        trial_start_sample <= spike_samples,
+                        spike_samples <= trial_end_sample
+                    )
+                    spike_times = (spike_samples[mask] - trial_start_sample) / m.sample_rate
+                    trial_spike_times[stimulus].append(spike_times)
+                    index = k
+                    trial_indices[stimulus].append(index * np.ones_like(spike_times))
+                    trial_duration = (trial_end_sample - trial_start_sample) / m.sample_rate
+                    if trial_duration > trial_durations[stimulus]:
+                        trial_durations[stimulus] = trial_duration
+            n_trials = {
+                stimulus: len(trial_spike_times[stimulus])
+                for stimulus in unique_stimuli
+            }
+            x_offsets = {}
+            x_offset = 0.0
+            x_margin = 1.0
+            for stimulus in unique_stimuli:
+                x_offsets[stimulus] = x_offset
+                x_offset += trial_durations[stimulus] + x_margin
+            width = x_offset - x_margin
+            y_offsets = {}
+            y_offset = 0
+            for stimulus in unique_stimuli:
+                y_offsets[stimulus] = 0
+                y_offset = max(y_offset, n_trials[stimulus])
+            height = y_offset
+            for stimulus in unique_stimuli:
+                trial_spike_times[stimulus] = np.concatenate(trial_spike_times[stimulus]) + x_offsets[stimulus]
+                trial_indices[stimulus] = np.concatenate(trial_indices[stimulus]) + y_offsets[stimulus]
+            x = np.concatenate(list(trial_spike_times.values()))
+            y = np.concatenate(list(trial_indices.values()))
+            data_bounds = (0.0, 0, width, height)
+            answer = Bunch(x=x, y=y, data_bounds=data_bounds)
+        return answer
+
+    def add_trial_view(self, gui):
+        v = TrialView(coords=self._get_trials)
+        return self._add_view(gui, v)
+
     # GUI
     # -------------------------------------------------------------------------
 
@@ -590,6 +678,13 @@ class TemplateController(object):
                 "The amplitude file is not available, the amplitude view won't be displayed.")
 
         self.add_probe_view(gui)
+
+        if self.model.trial_start_samples is not None \
+                and self.model.trial_end_samples is not None:
+            self.add_trial_view(gui)
+        else:
+            logger.warning(
+                "The trial files are not available, the trial view won't be displayed.")
 
         # Save the memcache when closing the GUI.
         @connect(sender=gui)

@@ -213,20 +213,24 @@ class TemplateModel(object):
         self.spike_times = self.spike_samples / sr
         ns, = self.n_spikes, = self.spike_times.shape
 
+        # Amplitudes.
         self.amplitudes = self._load_amplitudes()
         assert self.amplitudes.shape == (ns,)
 
+        # Spike templates.
         self.spike_templates = self._load_spike_templates()
         assert self.spike_templates.shape == (ns,)
 
+        # Spike clusters.
         self.spike_clusters = self._load_spike_clusters()
         assert self.spike_clusters.shape == (ns,)
 
-        # Channels.
+        # Channel map.
         self.channel_mapping = self._load_channel_map()
         self.n_channels = nc = self.channel_mapping.shape[0]
         assert np.all(self.channel_mapping <= self.n_channels_dat - 1)
 
+        # Channel position.
         self.channel_positions = self._load_channel_positions()
         assert self.channel_positions.shape == (nc, 2)
 
@@ -255,6 +259,7 @@ class TemplateModel(object):
         assert self.similar_templates.shape == (self.n_templates,
                                                 self.n_templates)
 
+        # Traces.
         self.traces = self._load_traces(self.channel_mapping)
         if self.traces is not None:
             self.duration = self.traces.shape[0] / float(self.sample_rate)
@@ -277,6 +282,7 @@ class TemplateModel(object):
         else:
             self.features = None
 
+        # Template features.
         tf = self._load_template_features()
         if tf is not None:
             self.template_features = tf.data
@@ -285,7 +291,13 @@ class TemplateModel(object):
         else:
             self.template_features = None
 
+        # Metadata.
         self.metadata = self._load_metadata()
+
+        # Trials.
+        self.trial_start_samples = self._load_trial_start_samples()
+        self.trial_end_samples = self._load_trial_end_samples()
+        self.trial_stimuli = self._load_trial_stimuli()
 
     def _create_waveform_loader(self):
         # Number of time samples in the templates.
@@ -307,6 +319,33 @@ class TemplateModel(object):
 
     def _write_array(self, name, arr):
         return write_array(self._get_array_path(name), arr)
+
+    def _load_trial_start_samples(self):
+        """Load trial start samples."""
+        try:
+            samples = self._read_array('trial_start_samples')
+        except IOError:
+            logger.debug("Error while loading trial start samples (skipped).")
+            samples = None
+        return samples
+
+    def _load_trial_end_samples(self):
+        """Load trial end samples."""
+        try:
+            samples = self._read_array('trial_end_samples')
+        except IOError:
+            logger.debug("Error while loading trial end samples (skipped).")
+            samples = None
+        return samples
+
+    def _load_trial_stimuli(self):
+        """Load trial stimulis."""
+        try:
+            stimuli = self._read_array('trial_stimuli')
+        except IOError:
+            logger.debug("Error while loading trial stimuli (skipped).")
+            stimuli = None
+        return stimuli
 
     def _load_metadata(self):
         """Load cluster metadata from all CSV files in the data directory."""
